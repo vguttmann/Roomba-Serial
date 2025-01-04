@@ -2,6 +2,27 @@ from machine import UART, Pin
 from time import sleep
 from enum import Enum
 
+
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+
+class InputError(Error):
+    """Exception raised for errors in the input.
+
+    Attributes:
+        `expression`:
+            input expression in which the error occurred
+        
+        `message`:
+            explanation of the error
+    """
+
+    def __init__(self, expression, message):
+        self.expression = expression
+        self.message = message
+
 class Roomba:
     BAUDRATE = 57600
     sci_states = Enum('status', [('off', 0), ('passive', 1), ('safe', 2), ('full', 3), ('undefined', -1)])
