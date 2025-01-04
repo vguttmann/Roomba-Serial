@@ -25,10 +25,7 @@ class InputError(Error):
 class StateError(Error):
     """Exception raised for errors in the input.
 
-    Attributes:
-        `expression`:
-            input expression in which the error occurred
-        
+    Attributes:    
         `message`:
             explanation of the error
     """
@@ -51,8 +48,8 @@ class Roomba:
         self._uart = UART(uart_id, Roomba._baudrate, Pin(tx_pin), Pin(rx_pin))
         self._uart.init(Roomba._baudrate, bits=8, parity=None, stop=1)
         self._SCI_status = Roomba.sci_states.undefined
-        self._device_detect = Pin(dd_pin, Pin.OUT)
-        self._device_detect.on()
+        self._device_detect = Pin(dd_pin, Pin.OUT, Pin.OPEN_DRAIN)
+        self._device_detect.off()
     
     def initialize_sci(self):
         self.send(128)
@@ -77,10 +74,122 @@ class Roomba:
             return
         elif self._SCI_status is self.sci_states.passive:
             self.send(130)
+            time.sleep_ms(25)
+            self._SCI_status = self.sci_states.safe
         elif self._SCI_status is self.sci_states.full:
             self.send(131)
+            time.sleep_ms(25)
+            self._SCI_status = self.sci_states.safe
         else:
             raise StateError("SCI is in an unknown state, something has gone catastrophically wrong")
+        
+    def set_sci_full(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        elif self._SCI_status is self.sci_states.full:
+            return
+        elif self._SCI_status is self.sci_states.safe:
+            self.send(132)
+            time.sleep_ms(25)
+            self._SCI_status = self.sci_states.full
+        else:
+            raise StateError("SCI is not in Safe mode, but in {self._SCI_status} mode. You have to explicitly traverse the states to minimize side effects.")
+    
+    def set_sci_passive(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if(self._SCI_status is self.sci_states.full or self._SCI_status is self.sci_states.safe):
+            self.send(133)
+            time.sleep_ms(25)
+            self._device_detect.on()
+            time.sleep_ms(550)
+            self._device_detect.off()
+            self._SCI_status = self.sci_states.passive
+        elif self._SCI_status is self.sci_states.passive:
+            return
+        else: 
+            raise StateError("SCI is in an unknown state ({self._SCI_status}), something has gone catastrophically wrong")
+
+    def press_power(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        self.send(133)
+        self._SCI_status = self.sci_states.passive
+    
+    def power_on(self):
+        self._device_detect.on()
+        time.sleep_ms(550)
+        self._device_detect.off()
+    
+    def press_spot(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        self.send(134)
+        self._SCI_status = self.sci_states.passive
+
+    def press_clean(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        self.send(135)
+        self._SCI_status = self.sci_states.passive
+
+    def press_max(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        if self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        self.send(136)
+        self._SCI_status = self.sci_states.passive
+
+    def set_drive_speed(self, speed, radius):
+        if(radius < -2000 or radius > 2000):
+            raise InputError(radius, "Radius must be between -2000 and 2000, but was {radius}!")
+        if((speed < -500 or speed > 500) and speed is not 32768):
+            raise InputError(speed, "Speed must be between -500 and 500 (or 32768), but was {speed}!")
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        elif self._SCI_status is self.sci_states.full:
+            self.set_sci_safe()
+        self.send((137, self._get_tc_high_byte_int16(speed), self._get_tc_low_byte_int16(speed), self._get_tc_high_byte_int16(radius), self._get_tc_low_byte_int16(radius)))
+        
+        
+    def _get_tc_high_byte_int16(self, number):
+        if number < 0:
+            number = (1 << 16) + number
+        number &= 0xFFFF
+        high_byte = (number >> 8) & 0xFF
+        return high_byte
+    
+    def _get_tc_low_byte_int16(self, number):
+        if number < 0:
+            number = (1 << 16) + number
+        number &= 0xFFFF
+        low_byte = number & 0xFF
+        return low_byte
+
+    def set_drive_speed_unsafe(self, speed, radius):
+        if(radius < -2000 or radius > 2000):
+            raise InputError(radius, "Radius must be between -2000 and 2000, but was {radius}!")
+        if((speed < -500 or speed > 500) and speed is not 32768):
+            raise InputError(speed, "Speed must be between -500 and 500 (or 32768), but was {speed}!")
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_full()
+        elif self._SCI_status is self.sci_states.safe:
+            self.set_sci_full()
+        self.send((137, self._get_tc_high_byte_int16(speed), self._get_tc_low_byte_int16(speed), self._get_tc_high_byte_int16(radius), self._get_tc_low_byte_int16(radius)))
+
 
     def send(self, message):
         """
