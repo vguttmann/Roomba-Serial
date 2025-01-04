@@ -77,6 +77,10 @@ class Roomba:
             return
         elif self._SCI_status is self.sci_states.passive:
             self.send(130)
+        elif self._SCI_status is self.sci_states.full:
+            self.send(131)
+        else:
+            raise StateError("SCI is in an unknown state, something has gone catastrophically wrong")
 
     def send(self, message):
         """
