@@ -230,6 +230,15 @@ class Roomba:
             raise InputError(song_number, "song_number must be between 0 and 15, but was {song_number}")
         self.send((141, song_number))
 
+    def set_force_dock(self):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.safe:
+            self.set_sci_passive()
+        elif self._SCI_status is self.sci_states.full:
+            self.set_sci_passive()
+        self.send(143)
+
 
     def send(self, message):
         self._uart.write(message)
