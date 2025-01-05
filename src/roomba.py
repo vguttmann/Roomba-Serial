@@ -208,8 +208,27 @@ class Roomba:
             raise InputError(power_intensity, "power_intensity must be between 0 and 255, but was {power_intensity}")
         self.send((139, status_green << 5 | status_red << 4 | spot << 3 | clean << 2 | max << 1 | dirt_detect << 0, power_color, power_intensity))
 
+    def play_song(self, song_number):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        elif self._SCI_status is self.sci_states.full:
+            self.set_sci_safe()
+        elif song_number < 0 or song_number > 15:
+            raise InputError(song_number, "song_number must be between 0 and 15, but was {song_number}")
+        self.send((141, song_number))
 
-
+    def play_song_unsafe(self, song_number):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_full()
+        elif self._SCI_status is self.sci_states.safe:
+            self.set_sci_full()
+        elif song_number < 0 or song_number > 15:
+            raise InputError(song_number, "song_number must be between 0 and 15, but was {song_number}")
+        self.send((141, song_number))
 
 
     def send(self, message):
