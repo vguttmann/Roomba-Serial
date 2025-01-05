@@ -2,33 +2,15 @@ from machine import UART, Pin
 import time
 from enum import Enum
 
-
 class Error(Exception):
-    """Base class for exceptions in this module."""
     pass
 
-
 class InputError(Error):
-    """Exception raised for errors in the input.
-
-    Attributes:
-        `expression`:
-            input expression in which the error occurred
-        
-        `message`:
-            explanation of the error
-    """
     def __init__(self, expression, message):
         self.expression = expression
         self.message = message
 
 class StateError(Error):
-    """Exception raised for errors in the input.
-
-    Attributes:    
-        `message`:
-            explanation of the error
-    """
     def __init__(self, message):
         self.message = message
 
@@ -37,14 +19,6 @@ class Roomba:
     sci_states = Enum('status', [('off', 0), ('passive', 1), ('safe', 2), ('full', 3), ('undefined', -1)])
     charging_states = Enum('status', [('not charging', 0), ('charging recovery', 1), ('charging', 2), ('trickle charging', 3), ('waiting', 4), ('charger error', 5), ('unknown', -1)])
     def __init__(self, tx_pin, rx_pin, dd_pin, uart_id=0):
-        """
-        Initialize UART communication.
-        
-        :param int tx_pin: Pin used for UART TX
-        :param int rx_pin: Pin used for UART RX
-        :param int dd_pin: Pin used for Device Detect
-        :param int uart_id: UART peripheral ID (e.g., 0, 1, or 2 depending on the board)
-        """
         self._uart = UART(uart_id, Roomba._baudrate, Pin(tx_pin), Pin(rx_pin))
         self._uart.init(Roomba._baudrate, bits=8, parity=None, stop=1)
         self._SCI_status = Roomba.sci_states.undefined
@@ -234,21 +208,14 @@ class Roomba:
             raise InputError(power_intensity, "power_intensity must be between 0 and 255, but was {power_intensity}")
         self.send((139, status_green << 5 | status_red << 4 | spot << 3 | clean << 2 | max << 1 | dirt_detect << 0, power_color, power_intensity))
 
+
+
+
+
     def send(self, message):
-        """
-        Send a message over UART.
-        
-        :param message: The message to send
-        """
         self._uart.write(message)
     
     def listen(self, bytes):
-        """
-        Listen for a reply on UART.
-        
-        :param timeout: Time in seconds to wait for a response
-        :return: The received message or None if timed out
-        """
         if bytes is None:
             reply = self._uart.read()
         else:
