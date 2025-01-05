@@ -190,6 +190,49 @@ class Roomba:
             self.set_sci_full()
         self.send((137, self._get_tc_high_byte_int16(speed), self._get_tc_low_byte_int16(speed), self._get_tc_high_byte_int16(radius), self._get_tc_low_byte_int16(radius)))
 
+    def set_motor_actions(self, main_brush=False, vacuum=False, side_brush=False):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        elif self._SCI_status is self.sci_states.full:
+            self.set_sci_safe()
+        self.send((138, main_brush << 2 | vacuum << 1 | side_brush << 0))
+
+    def set_motor_unsafe(self, main_brush=False, vacuum=False, side_brush=False):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_full()
+        elif self._SCI_status is self.sci_states.safe:
+            self.set_sci_full()
+        self.send((138, main_brush << 2 | vacuum << 1 | side_brush << 0))
+
+    def set_led_state(self, status_green=False, status_red=False, spot=False, clean=False, max=False, dirt_detect=False, power_color=0, power_intensity=0):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_safe()
+        elif self._SCI_status is self.sci_states.full:
+            self.set_sci_safe()
+        elif power_color < 0 or power_color > 255:
+            raise InputError(power_color, "power_color must be between 0 and 255, but was {power_color}")
+        elif power_intensity < 0 or power_intensity > 255:
+            raise InputError(power_intensity, "power_intensity must be between 0 and 255, but was {power_intensity}")
+        self.send((139, status_green << 5 | status_red << 4 | spot << 3 | clean << 2 | max << 1 | dirt_detect << 0, power_color, power_intensity))
+
+    def set_led_state_unsafe(self, status_green=False, status_red=False, spot=False, clean=False, max=False, dirt_detect=False, power_color=0, power_intensity=0):
+        if self._SCI_status is self.sci_states.off:
+            raise StateError("SCI has not been initialized yet!")
+        elif self._SCI_status is self.sci_states.passive:
+            self.set_sci_full()
+        elif self._SCI_status is self.sci_states.safe:
+            self.set_sci_full()
+        elif power_color < 0 or power_color > 255:
+            raise InputError(power_color, "power_color must be between 0 and 255, but was {power_color}")
+        elif power_intensity < 0 or power_intensity > 255:
+            raise InputError(power_intensity, "power_intensity must be between 0 and 255, but was {power_intensity}")
+        self.send((139, status_green << 5 | status_red << 4 | spot << 3 | clean << 2 | max << 1 | dirt_detect << 0, power_color, power_intensity))
 
     def send(self, message):
         """
