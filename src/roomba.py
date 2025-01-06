@@ -19,6 +19,18 @@ class Roomba:
     sci_states = Enum('status', [('off', 0), ('passive', 1), ('safe', 2), ('full', 3), ('undefined', -1)])
     charging_states = Enum('status', [('not charging', 0), ('charging recovery', 1), ('charging', 2), ('trickle charging', 3), ('waiting', 4), ('charger error', 5), ('unknown', -1)])
     def __init__(self, tx_pin, rx_pin, dd_pin, uart_id=0):
+        if uart_id is 0:
+            if tx_pin not in (1, 16, 21):
+                raise InputError(tx_pin, "tx_pin for UART 0 must be 1, 16 or 21, but was {tx_pin}")            
+            if rx_pin not in (2, 17, 22):
+                raise InputError(rx_pin, "rx_pin for UART 0 must be 2, 17 or 22, but was {rx_pin}")
+        if uart_id is 1:
+            if tx_pin not in (6, 11):
+                raise InputError(tx_pin, "tx_pin for UART 1 must be 6 or 11, but was {tx_pin}")            
+            if rx_pin not in (7, 12):
+                raise InputError(rx_pin, "rx_pin for UART 1 must be 7 or 12, but was {rx_pin}")
+        if uart_id < 0 or uart_id > 1:
+            raise InputError(uart_id, "The Pi Pico only has two UARTs, but you used UART ID {uart_id}")
         self._uart = UART(uart_id, Roomba._baudrate, Pin(tx_pin), Pin(rx_pin))
         self._uart.init(Roomba._baudrate, bits=8, parity=None, stop=1)
         self._SCI_status = Roomba.sci_states.undefined
